@@ -18,15 +18,15 @@ while trying to do so intelligently.  The basic rules:
 
 =over
 
-=item Addresses are extracted from the To, Cc, and From headers.
+=item * Addresses are extracted from the To, Cc, and From headers.
 
-=item Any address matching a configured address for RT is discarded.
+=item * Any address matching a configured address for RT is discarded.
 
-=item Any address which is already a ticket watcher is discarded.
+=item * Any address which is already a ticket watcher is discarded.
 
-=item If the address matches a privileged user, the user is added as a ticket AdminCc.
+=item * If the address matches a privileged user, the user is added as a ticket AdminCc.
 
-=item Otherwise, the address is added as a ticket Cc.
+=item * Otherwise, the address is added as a ticket Cc.
 
 =back
 
@@ -120,9 +120,11 @@ addresses> action.  A suggested scrip is:
 
     Condition: On Create
     Action: Automatically add ticket watchers from new addresses
+    Template: Blank
+    Stage: Normal
 
 I strongly suggest only running this action I<On Create> instead of on all
-correspondences (matching the behaviour of C<$ParseB<New>MessageForTicketCcs>)
+correspondences (matching the behaviour of C<$ParseNewMessageForTicketCcs>)
 so that watchers may not add themselves simply by replying to a ticket.
 
 =head1 INSTALLATION
