@@ -16,6 +16,7 @@ meta-spec:
 name: RT-Action-AutoAddWatchers
 no_index:
   directory:
+    - etc
     - inc
 requires:
   List::MoreUtils: 0
