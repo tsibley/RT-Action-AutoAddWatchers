@@ -5,18 +5,24 @@ DESCRIPTION
     Automatically adds new watchers from the current transaction to the
     ticket, while trying to do so intelligently. The basic rules:
 
-    Addresses are extracted from the To, Cc, and From headers.
-    Any address matching a configured address for RT is discarded.
-    Any address which is already a ticket watcher is discarded.
-    If the address matches a privileged user, the user is added as a ticket
-    AdminCc.
-    Otherwise, the address is added as a ticket Cc.
+    *   Addresses are extracted from the To, Cc, and From headers.
+
+    *   Any address matching a configured address for RT is discarded.
+
+    *   Any address which is already a ticket watcher is discarded.
+
+    *   If the address matches a privileged user, the user is added as a
+        ticket AdminCc.
+
+    *   Otherwise, the address is added as a ticket Cc.
 
     Notably, this does not skip addresses which are already queue watchers.
     The intent is to ensure that explicitly named people remain explicit on
     the ticket but don't receive duplicate mail. This is the reason for the
     distinction between ticket Cc/AdminCc, under the assumption that your
-    queue watchers are AdminCcs.
+    queue watchers are AdminCcs. It also pairs nicely with a notification
+    setup using RT::Extension::NotifyBasedOnOwnership and enables queue
+    watchers to be looped into specific tickets via the initial email.
 
     The default installation does not create a scrip for you. You must do
     that for yourself using the new *Automatically add ticket watchers from
@@ -24,6 +30,8 @@ DESCRIPTION
 
         Condition: On Create
         Action: Automatically add ticket watchers from new addresses
+        Template: Blank
+        Stage: Normal
 
     I strongly suggest only running this action *On Create* instead of on
     all correspondences (matching the behaviour of
