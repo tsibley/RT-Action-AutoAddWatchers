@@ -1,14 +1,131 @@
 use strict;
 use warnings;
 package RT::Action::AutoAddWatchers;
+use base 'RT::Action';
 
 our $VERSION = '0.01';
 
+use List::MoreUtils qw< part >;
+
 =head1 NAME
 
-RT-Action-AutoAddWatchers - [One line description of module's purpose here]
+RT-Action-AutoAddWatchers - A more powerful C<$ParseNewMessageForTicketCcs>
 
-=head1 INSTALLATION 
+=head1 DESCRIPTION
+
+Automatically adds new watchers from the current transaction to the ticket,
+while trying to do so intelligently.  The basic rules:
+
+=over
+
+=item Addresses are extracted from the To, Cc, and From headers.
+
+=item Any address matching a configured address for RT is discarded.
+
+=item Any address which is already a ticket watcher is discarded.
+
+=item If the address matches a privileged user, the user is added as a ticket AdminCc.
+
+=item Otherwise, the address is added as a ticket Cc.
+
+=back
+
+=cut
+
+sub Prepare {
+    my $self = shift;
+    my $Ticket = $self->TicketObj;
+    my $Transaction = $self->TransactionObj;
+    return unless $Ticket and $Transaction;
+
+    # Extract addresses
+    # Filter for IsRTAddress
+    # Filter for existing watchers
+    # Part privileged users into AdminCc and others into Cc
+    return unless my $msg = $Transaction->Attachments->First;
+
+    my %addr = %{ $msg->Addresses };
+
+    ($self->{AdminCcs}, $self->{Ccs}) =
+        part { $self->IsPrivileged($_->address) ? 0 : 1 }
+        grep { not $self->IsTicketWatcher($_->address) }
+        grep { not RT::EmailParser->IsRTAddress($_->address) }
+         map { @{ $addr{$_} || [] } }
+           qw( From To Cc );
+
+    return 1;
+}
+
+sub Commit {
+    my $self = shift;
+    my $AdminCcs = $self->{AdminCcs} || [];
+    my $Ccs = $self->{Ccs} || [];
+
+    return 1 unless @$AdminCcs or @$Ccs;
+
+    # RT will take care of preventing duplicates.
+    for ([ AdminCc => $AdminCcs ], [ Cc => $Ccs ]) {
+        for my $addr (@{$_->[1]}) {
+            my ($ok, $msg) = $self->TicketObj->AddWatcher(
+                Type  => $_->[0],
+                Email => $addr->address,
+            );
+            unless ($ok) {
+                RT->Logger->error( sprintf
+                    "Unable to add <%s> as %s to ticket #%d: %s",
+                    $addr->address, $_->[0], $self->TicketObj->id, $msg
+                );
+            }
+        }
+    }
+
+    return 1;
+}
+
+sub IsTicketWatcher {
+    my $self = shift;
+    my $email = shift;
+    my $Ticket = $self->TicketObj;
+
+    my $user = RT::User->new(RT->SystemUser);
+    $user->LoadByEmail($email);
+    return unless $user->Id;
+    for (qw(Requestor Cc AdminCc Owner)) {
+        return 1 if $Ticket->IsWatcher( Type => $_, PrincipalId => $user->PrincipalId );
+    }
+    return 0;
+}
+
+sub IsPrivileged {
+    my $self = shift;
+    my $email = shift;
+
+    my $user = RT::User->new(RT->SystemUser);
+    $user->LoadByEmail($email);
+    return unless $user->Id;
+    return $user->Privileged;
+}
+
+=pod
+
+Notably, this does B<not> skip addresses which are already queue watchers.  The
+intent is to ensure that explicitly named people remain explicit on the ticket
+but don't receive duplicate mail.  This is the reason for the distinction
+between ticket Cc/AdminCc, under the assumption that your queue watchers are
+AdminCcs.
+
+The default installation does B<not> create a scrip for you.  You must do that
+for yourself using the new I<Automatically add ticket watchers from new
+addresses> action.  A suggested scrip is:
+
+    Condition: On Create
+    Action: Automatically add ticket watchers from new addresses
+
+I strongly suggest only running this action I<On Create> instead of on all
+correspondences (matching the behaviour of C<$ParseB<New>MessageForTicketCcs>)
+so that watchers may not add themselves simply by replying to a ticket.
+
+=head1 INSTALLATION
 
 =over
 
@@ -24,7 +141,7 @@ May need root permissions
 
 Add this line:
 
-    Set(@Plugins, qw(RT::Action::AutoAddWatchers));
+    Plugin("RT::Action::AutoAddWatchers");
 
 or add C<RT::Action::AutoAddWatchers> to your existing C<@Plugins> line.
 
@@ -33,6 +150,8 @@ or add C<RT::Action::AutoAddWatchers> to your existing C<@Plugins> line.
     rm -rf /opt/rt4/var/mason_data/obj
 
 =item Restart your webserver
+
+=item Create a scrip (or scrips) as appropriate for your installation using the new action.
 
 =back
 
@@ -47,6 +166,9 @@ L<bug-RT-Action-AutoAddWatchers@rt.cpan.org|mailto:bug-RT-Action-AutoAddWatchers
 or via the web at
 L<rt.cpan.org|http://rt.cpan.org/Public/Dist/Display.html?Name=RT-Action-AutoAddWatchers>.
 
+=head1 SEE ALSO
+
+L<RT::Extension::NonWatcherRecipients>
 
 =head1 LICENSE AND COPYRIGHT
 

@@ -17,6 +17,8 @@ name: RT-Action-AutoAddWatchers
 no_index:
   directory:
     - inc
+requires:
+  List::MoreUtils: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
 version: 0.01
