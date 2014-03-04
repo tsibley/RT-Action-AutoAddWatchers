@@ -112,7 +112,9 @@ Notably, this does B<not> skip addresses which are already queue watchers.  The
 intent is to ensure that explicitly named people remain explicit on the ticket
 but don't receive duplicate mail.  This is the reason for the distinction
 between ticket Cc/AdminCc, under the assumption that your queue watchers are
-AdminCcs.
+AdminCcs.  It also pairs nicely with a notification setup using
+L<RT::Extension::NotifyBasedOnOwnership> and enables queue watchers to be
+looped into specific tickets via the initial email.
 
 The default installation does B<not> create a scrip for you.  You must do that
 for yourself using the new I<Automatically add ticket watchers from new
