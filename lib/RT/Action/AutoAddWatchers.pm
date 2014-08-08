@@ -3,7 +3,7 @@ use warnings;
 package RT::Action::AutoAddWatchers;
 use base 'RT::Action';
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use List::MoreUtils qw< part >;
 
