@@ -141,6 +141,10 @@ so that watchers may not add themselves simply by replying to a ticket.
 
 May need root permissions
 
+=item C<make initdb>
+
+May need root permissions
+
 =item Edit your F</opt/rt4/etc/RT_SiteConfig.pm>
 
 Add this line:
